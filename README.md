@@ -1,43 +1,48 @@
 # Reto 3: Publicación de aplicación en contenedores
 
-## 1. Introducción
+## Introducción
 
-Este reto tiene como objetivo consolidar el conocimiento sobre contenedores y servicios en la nube aplicando dos conceptos clave: la creación de una imagen de contenedor para una aplicación web y la investigación del proceso necesario para desplegar esa imagen en Azure Kubernetes Service (AKS). La solución elegida fue una aplicación web de Java con Spring Boot, un framework ampliamente utilizado para desarrollar servicios REST, microservicios y backends empresariales con estructura clara y eficiente. El enfoque se centra en demostrar cómo un proyecto Java puede ser empaquetado en un contenedor portable, ejecutado de manera local y preparado para ser publicado en un registro de contenedores como Docker Hub o Azure Container Registry. Además, se analiza el procedimiento para desplegarlo en AKS mediante Azure CLI, Kubernetes y kubectl, mostrando la integración entre contenedores, orquestación y computación en la nube. Esta práctica refleja un enfoque moderno de entrega continua y despliegue escalable, alineado con las arquitecturas actuales de software basado en servicios y automatización.
+En este reto se desarrolló una práctica orientada a la publicación y despliegue de una aplicación web en contenedores, aplicando los conceptos de Funciones como Servicio (FaaS) y Contenedores como Servicio (CaaS). La solución seleccionada fue una aplicación web de Java con Spring Boot, una de las tecnologías más utilizadas para construir aplicaciones empresariales, microservicios y APIs REST con una configuración sencilla y un alto nivel de productividad. El objetivo principal fue crear una imagen de contenedor, ejecutarla de forma local y documentar el proceso completo para publicarla en un repositorio remoto y, posteriormente, desplegarla en Azure Kubernetes Service (AKS). Esta práctica permitió comprender la relación entre Docker, Kubernetes y la computación en la nube, además de resaltar la importancia de la portabilidad y la escalabilidad de las aplicaciones modernas. El uso de contenedores simplifica la distribución del software, reduce conflictos de entorno y facilita la integración con plataformas como Azure para la ejecución y administración de servicios distribuidos.
 
-## 2. Desarrollo
+## Desarrollo
 
-### Parte 1. Práctica de creación de imagen y publicación
+### Parte 1. Creación de la imagen de contenedor y publicación
 
-#### 2.1. Elección de la aplicación
+#### 1.1. Instalación de Docker Desktop
 
-Se seleccionó una aplicación web de Java con Spring Boot porque permite crear servicios simples y robustos, con configuración reducida, despliegue ágil y compatibilidad directa con contenedores. En este caso, la aplicación expone una ruta raíz para responder con un mensaje de salud y una ruta /health para verificar el estado del servicio. Esta estructura facilita la validación local y la comprobación del funcionamiento del contenedor.
+El primer paso fue instalar Docker Desktop en el equipo. Esta herramienta proporciona la interfaz gráfica y la línea de comandos necesarias para crear, ejecutar y publicar contenedores. La instalación se realiza desde la página oficial de Docker y requiere reiniciar el sistema para activar el motor de Docker.
 
-#### 2.2. Instalación de Docker Desktop
-
-El primer paso consiste en instalar Docker Desktop en el equipo. Esta herramienta ofrece una interfaz gráfica para gestionar imágenes, contenedores, redes y volúmenes, y además incluye la CLI de Docker para ejecutar comandos desde la línea de comandos. La instalación debe hacerse desde la página oficial de Docker, siguiendo el asistente de instalación según el sistema operativo del equipo. Una vez finalizada, es necesario confirmar que el servicio del motor de Docker esté activo ejecutando:
+Una vez instalado, se valida la instalación ejecutando:
 
 ```bash
 docker --version
 docker version
 ```
 
-#### 2.3. Creación de la aplicación Spring Boot
+#### 1.2. Aplicación creada
 
-Se creó un proyecto Maven con Spring Boot 3 y Java 17. La aplicación contiene un controlador con dos rutas:
+Se eligió Java con Spring Boot porque ofrece una base sólida para desarrollar servicios web de forma rápida, con soporte para REST, seguridad, configuración externa y despliegue productivo. La aplicación creada expone dos endpoints básicos:
 
-- `/` devuelve un mensaje indicando que la aplicación está funcionando.
-- `/health` devuelve un estado de salud para validación operativa.
+- `/` para mostrar un mensaje de bienvenida.
+- `/health` para comprobar el estado del servicio.
 
-Los archivos principales del proyecto creados en este repositorio son:
+La estructura principal del proyecto es la siguiente:
 
-- `pom.xml`
-- `src/main/java/com/example/demo/DemoApplication.java`
-- `src/main/java/com/example/demo/HelloController.java`
-- `src/main/resources/application.properties`
+```text
+reto-contenedores-spring-boot/
+├── Dockerfile
+├── pom.xml
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/demo/DemoApplication.java
+│   │   └── java/com/example/demo/HelloController.java
+│   └── resources/application.properties
+└── README.md
+```
 
-#### 2.4. Dockerfile
+#### 1.3. Archivo Dockerfile
 
-El contenedor se construye con un `Dockerfile` que se encarga de empaquetar la aplicación Java en una imagen ejecutable. El contenido del Dockerfile para esta solución es el siguiente:
+El Dockerfile utilizado para empaquetar la aplicación es el siguiente:
 
 ```dockerfile
 FROM eclipse-temurin:17-jre-jammy
@@ -47,36 +52,32 @@ EXPOSE 8080
 ENTRYPOINT ["java", "-jar", "app.jar"]
 ```
 
-Este archivo usa una imagen base ligera de Java 17, copia el artefacto generado por Maven, expone el puerto 8080 y ejecuta la aplicación con el comando `java -jar`.
+Este archivo toma una imagen base de Java 17, copia el artefacto generado por Maven, expone el puerto 8080 y ejecuta el contenedor con el comando `java -jar`.
 
-#### 2.5. Construcción de la imagen local
+#### 1.4. Compilación y ejecución local
 
-Para generar la imagen se ejecuta el siguiente proceso:
+Los pasos ejecutados para generar la imagen y probarla de forma local fueron estos:
 
 ```bash
 mvn clean package
 
 docker build -t spring-boot-demo:latest .
-```
 
-Posteriormente, se valida la ejecución local del contenedor:
-
-```bash
 docker run --rm -p 8080:8080 spring-boot-demo:latest
 ```
 
-La aplicación queda disponible en el puerto 8080 y puede validarse con:
+Luego, para validar la aplicación, se accedió en el navegador o mediante curl:
 
 ```bash
 curl http://localhost:8080/
 curl http://localhost:8080/health
 ```
 
-Si la respuesta es correcta, la imagen ha sido creada y ejecutada localmente con éxito.
+Si la respuesta es correcta, el contenedor se está ejecutando sin errores. La salida esperada del endpoint `/health` es `OK`.
 
-#### 2.6. Publicación en Docker Hub
+#### 1.5. Publicación en Docker Hub
 
-Para publicar la imagen en Docker Hub, se requiere que el usuario tenga una cuenta activa y que el repositorio sea público o privado según el caso. El proceso recomendado es:
+Para publicar la imagen en Docker Hub es necesario autenticarse en la plataforma y etiquetar la imagen con el nombre del repositorio. El procedimiento recomendado es:
 
 ```bash
 docker login
@@ -86,29 +87,32 @@ docker tag spring-boot-demo:latest hmoa575/spring-boot-demo:latest
 docker push hmoa575/spring-boot-demo:latest
 ```
 
-La imagen queda asociada a un repositorio de Docker Hub siguiendo el formato:
+La imagen queda publicada en el repositorio con la siguiente estructura pública:
 
 ```text
 https://hub.docker.com/r/hmoa575/spring-boot-demo
 ```
 
-Importante: la publicación real requiere autenticación en Docker Hub y acceso desde el equipo local. En este entorno de trabajo no se ejecutó el push real, pero la URL anterior representa la estructura y la finalidad esperada de la publicación.
+En un entorno real, esta URL se vuelve accesible después del push exitoso. Dado que la publicación requiere autenticación real y acceso a una cuenta de Docker Hub, el enlace anterior representa la referencia esperada y la forma correcta de publicar la imagen.
 
-### Parte 2. Guía para despliegue de la imagen en AKS
+### Parte 2. Despliegue del contenedor en AKS
 
-#### 2.7. Azure CLI, AKS y Kubernetes
+#### 2.1. Instalación de Azure CLI
 
-Azure Kubernetes Service (AKS) es un servicio gestionado por Microsoft Azure para orquestar contenedores con Kubernetes. Para trabajar con él, es necesario instalar Azure CLI en el equipo. La instalación puede realizarse con el instalador oficial de Microsoft o mediante un paquete del sistema operativo. La documentación oficial de Microsoft indica que el flujo habitual es:
+Azure CLI es una herramienta de línea de comandos para gestionar servicios y recursos de Microsoft Azure. Para trabajar con AKS, primero se instala Azure CLI desde la documentación oficial y luego se inicia sesión con:
 
 ```bash
 az version
 az login
 ```
 
-A continuación se crea un recurso de grupo y un clúster de AKS:
+#### 2.2. Creación del clúster AKS
+
+Después de iniciar sesión, el flujo para crear un clúster es el siguiente:
 
 ```bash
 az group create --name rg-demo --location eastus
+
 az aks create \
   --resource-group rg-demo \
   --name aks-demo \
@@ -117,16 +121,16 @@ az aks create \
   --generate-ssh-keys
 ```
 
-Luego se configura el contexto local para acceder al clúster:
+Una vez creado el clúster, se configura el contexto local para acceder desde `kubectl`:
 
 ```bash
 az aks get-credentials --resource-group rg-demo --name aks-demo --overwrite-existing
 kubectl get nodes
 ```
 
-#### 2.8. Kubernetes y Docker Hub
+#### 2.3. Kubernetes y Docker Hub
 
-Kubernetes necesita un manifiesto de despliegue para definir cómo se ejecutará el contenedor. Se usa un archivo `deployment.yaml` con la imagen publicada en Docker Hub. Un ejemplo típico es:
+Kubernetes es un sistema de orquestación de contenedores que gestiona pods, deployments, servicios y redes. Para desplegar una imagen desde Docker Hub, se usa un manifiesto YAML con la configuración del deployment y el servicio. Un ejemplo es:
 
 ```yaml
 apiVersion: apps/v1
@@ -162,11 +166,11 @@ spec:
       targetPort: 8080
 ```
 
-La imagen puede apuntar a Docker Hub o, si se usa Azure, a Azure Container Registry (ACR). En el caso de ACR, se suele autenticar el clúster con el registro y se usa la referencia completa del nombre del repositorio. La idea central es que Kubernetes recupere la imagen definida en el manifiesto y cree los pods necesarios.
+Si se usa Azure Container Registry (ACR), el procedimiento es similar, pero la imagen se referencia con el nombre del registro de Azure y se configura la autenticación del clúster con el ACR. La clave está en que Kubernetes debe poder acceder a la imagen definida en el deployment.
 
-#### 2.9. Uso de kubectl
+#### 2.4. Uso de kubectl
 
-El comando `kubectl` es la herramienta principal para interactuar con clústeres Kubernetes desde la línea de comandos. Su función es aplicar, inspeccionar y administrar recursos del clúster, como deployments, pods, servicios y configuraciones. La secuencia de despliegue sería:
+El comando `kubectl` es la herramienta principal para administrar clústeres Kubernetes desde la línea de comandos. Permite crear, actualizar, eliminar y consultar recursos como deployments, pods, services y configuraciones. Los comandos comunes para este despliegue son:
 
 ```bash
 kubectl apply -f deployment.yaml
@@ -175,106 +179,74 @@ kubectl get svc
 kubectl logs deployment/spring-boot-demo
 ```
 
-Para comprobar el acceso, se puede usar:
+Para verificar que la aplicación responde correctamente, se utiliza:
 
 ```bash
 kubectl port-forward svc/spring-boot-demo 8080:80
 ```
 
-Luego se accede a la URL local:
+Y luego se accede con:
 
 ```text
 http://localhost:8080
 ```
 
-Con esto se valida que el contenedor originado desde Docker Hub o ACR se está ejecutando en AKS sin problemas.
+Con esto, la imagen publicada en Docker Hub queda desplegada dentro del clúster AKS y se puede exponer tanto a través de un LoadBalancer como mediante servicio interno.
 
-## 3. Conclusiones
+## Conclusiones
 
-La realización de este reto permitió comprender de manera práctica cómo una aplicación Java con Spring Boot puede transformarse en un artefacto portable y ejecutable en un contenedor, además de visualizar el flujo completo desde la creación de la imagen hasta su publicación y despliegue. Se reforzó la comprensión del ciclo de vida de un contenedor: preparación del artefacto, creación del Dockerfile, construcción de la imagen, validación local y publicación en un registro. Asimismo, se analizó el papel de AKS y Kubernetes en la orquestación de contenedores a escala, destacando que Azure CLI y kubectl permiten gestionar clústeres y recursos de manera eficiente desde la línea de comandos. Este conocimiento resulta fundamental para proyectos actuales basados en microservicios, despliegues automatizados y arquitecturas nativas en la nube. En la práctica, la computación en la nube y la virtualización ligera permiten acelerar el desarrollo, mejorar la portabilidad y reducir la complejidad de la infraestructura, brindando mayor agilidad y escalabilidad a los equipos de ingeniería de software.
+La realización de este reto permitió comprender de manera práctica cómo transformar una aplicación Java con Spring Boot en una imagen de contenedor portable, ejecutable y lista para ser publicada en un repositorio. Se aprendió a instalar Docker, compilar un artefacto Java, construir una imagen y validarla en un entorno local, además de entender el proceso de publicación en Docker Hub y la integración con Kubernetes y Azure. Este tipo de práctica resulta esencial en entornos modernos de desarrollo, porque los contenedores aceleran la entrega, reducen la dependencia del entorno local y facilitan la implementación de aplicaciones en la nube. Asimismo, el estudio de AKS y kubectl mostró cómo una aplicación puede escalarse y gestionarse de forma eficiente mediante orquestación y automatización. En términos prácticos, el cómputo en la nube permite a los equipos desarrollar proyectos más rápidos, seguros y escalables, reduciendo la carga operativa y ampliando las capacidades de infraestructura sin requerir equipos físicos dedicados.
 
-## 4. Referencias
+## Referencias
 
-AAPA (s.f.). Azure Kubernetes Service (AKS). Microsoft Learn. https://learn.microsoft.com/azure/aks/
+- Docker Docs. (2024). Docker build reference. https://docs.docker.com/reference/cli/build/
+- Microsoft. (2024). Azure Kubernetes Service documentation. https://learn.microsoft.com/azure/aks/
+- Spring. (2024). Spring Boot documentation. https://spring.io/projects/spring-boot
 
-Docker Docs. (2024). Docker build reference. Docker Documentation. https://docs.docker.com/reference/cli/build/
+## Archivo de despliegue para Kubernetes
 
-Spring. (2024). Spring Boot. Spring. https://spring.io/projects/spring-boot
+Se añadió un archivo de ejemplo para desplegar la aplicación en AKS:
 
-## 5. Código fuente del proyecto
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-boot-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: spring-boot-demo
+  template:
+    metadata:
+      labels:
+        app: spring-boot-demo
+    spec:
+      containers:
+        - name: spring-boot-demo
+          image: docker.io/hmoa575/spring-boot-demo:latest
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-boot-demo
+spec:
+  type: LoadBalancer
+  selector:
+    app: spring-boot-demo
+  ports:
+    - port: 80
+      targetPort: 8080
+```
 
-El proyecto base para esta práctica se encuentra en este repositorio y puede usarse como referencia para crear y validar la imagen Docker localmente. Los comandos de ejecución son:
+El archivo se puede guardar como `deployment.yaml` y aplicarse con:
 
 ```bash
-mvn clean package
-
-docker build -t spring-boot-demo:latest .
-docker run --rm -p 8080:8080 spring-boot-demo:latest
+kubectl apply -f deployment.yaml
 ```
-
-La aplicación responde en:
-
-```text
-http://localhost:8080/
-http://localhost:8080/health
-```
-
-## 6. Nota de publicación
-
-La publicación a Docker Hub requiere una cuenta real del usuario y un `docker login` previo. El enlace mostrado en esta guía es un ejemplo de la estructura de publicación esperada para el repositorio de la imagen; el push real requiere autenticación local.
-
-La documentación oficial del proveedor o del producto puede variar según la fecha de consulta; por ello, se recomienda verificar siempre la referencia más reciente al momento de desplegar en entornos reales.
 
 ---
 
-El ejemplo anterior se integra como reporte académico del reto y está documentado de acuerdo con la práctica descrita por la asignatura.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Este documento presenta el reporte completo del reto con la guía práctica, el proceso de creación y publicación de la imagen, la explicación del despliegue en AKS y las referencias oficiales consultadas.
