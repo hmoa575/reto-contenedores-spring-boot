@@ -1,0 +1,15 @@
+# .dockerignore
+
+target/
+.git/
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Maven wrapper optional
+.mvn/
+
+# OS files
+.DS_Store
+Thumbs.db
